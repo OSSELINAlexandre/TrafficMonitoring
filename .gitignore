@@ -25,3 +25,10 @@ replay_pid*
 
 # Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
 .kotlin/
+.idea/
+# Disposable Android/Firestack spike build outputs
+spike/.gradle/
+spike/build/
+spike/app/build/
+spike/local.properties
+!spike/gradle/wrapper/gradle-wrapper.jar
