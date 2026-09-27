@@ -21,6 +21,7 @@ class MonitoringViewModel(app: Application) : AndroidViewModel(app) {
     val vpnConsent = _vpnConsent.asSharedFlow()
     val phase = graph.runtime.phase
     val live = graph.runtime.live
+    val underlay = graph.runtime.underlay
     val latestSession = graph.repository.observeLatestFinished()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

@@ -5,6 +5,7 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import com.trafficmonitor.privacy.data.model.UnderlayType
 
 data class UnderlaySnapshot(
     val network: Network,
@@ -12,13 +13,33 @@ data class UnderlaySnapshot(
     val cellular: Boolean,
     val mtu: Int,
     val dnsServers: List<String>,
-)
+) {
+    fun kind(): String = UnderlayPreference.kind(wifi, cellular)
+}
 
 /**
- * Picks a non-VPN network that already has Internet. The active network wins so
- * traffic keeps using whatever the device is using (mobile data or Wi-Fi).
- * Mid-session handoff is best-effort only.
+ * Chooses the non-VPN underlay used for socket bind, `setUnderlyingNetworks`,
+ * and system DNS. Weights match the Firestack spike: a validated Wi-Fi wins
+ * when it is present; otherwise a validated mobile network beats an
+ * unvalidated Wi-Fi. A later change only retargets that underlay. The VPN
+ * is not recreated.
  */
+object UnderlayPreference {
+    fun score(validated: Boolean, wifi: Boolean, cellular: Boolean): Int {
+        var value = 0
+        if (validated) value += 100
+        if (wifi) value += 10
+        if (cellular) value += 5
+        return value
+    }
+
+    fun kind(wifi: Boolean, cellular: Boolean): String = when {
+        wifi -> UnderlayType.WIFI
+        cellular -> UnderlayType.CELLULAR
+        else -> UnderlayType.OTHER
+    }
+}
+
 class UnderlayWatcher(
     private val connectivity: ConnectivityManager,
     private val onSnapshot: (UnderlaySnapshot) -> Unit,
@@ -77,6 +98,8 @@ class UnderlayWatcher(
         registered = false
     }
 
+    fun recordedKind(): String = latest?.kind() ?: UnderlayType.UNKNOWN
+
     private fun select() {
         val chosen = preferred() ?: return
         if (chosen == current && latest != null) return
@@ -100,9 +123,17 @@ class UnderlayWatcher(
     }
 
     private fun preferred(): Network? {
-        connectivity.activeNetwork?.takeIf(::eligible)?.let { return it }
-        val pool = synchronized(gate) { candidates.toList() }
-        return pool.filter(::eligible).maxByOrNull(::score)
+        val pool = synchronized(gate) { candidates.toMutableSet() }
+        connectivity.activeNetwork?.let { pool += it }
+        val ranked = pool.filter(::eligible)
+        if (ranked.isEmpty()) return null
+        val staying = current
+        val active = connectivity.activeNetwork
+        return ranked.maxWithOrNull(
+            compareBy<Network>(::score)
+                .thenBy { network -> if (network == staying) 1 else 0 }
+                .thenBy { network -> if (network == active) 1 else 0 },
+        )
     }
 
     private fun eligible(network: Network): Boolean {
@@ -113,11 +144,11 @@ class UnderlayWatcher(
 
     private fun score(network: Network): Int {
         val capabilities = connectivity.getNetworkCapabilities(network) ?: return 0
-        var value = 0
-        if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) value += 100
-        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) value += 5
-        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) value += 4
-        return value
+        return UnderlayPreference.score(
+            validated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+            wifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
+            cellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
+        )
     }
 
     companion object {

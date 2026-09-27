@@ -38,6 +38,7 @@ import com.trafficmonitor.privacy.data.model.SessionStatus
 import com.trafficmonitor.privacy.monitoring.MonitoringPhase
 import com.trafficmonitor.privacy.ui.formatBytes
 import com.trafficmonitor.privacy.ui.formatDuration
+import com.trafficmonitor.privacy.ui.underlaySessionLabel
 import kotlinx.coroutines.delay
 
 @Composable
@@ -48,6 +49,7 @@ fun MonitoringScreen(
     val context = LocalContext.current
     val phase by viewModel.phase.collectAsStateWithLifecycle()
     val live by viewModel.live.collectAsStateWithLifecycle()
+    val underlay by viewModel.underlay.collectAsStateWithLifecycle()
     val latest by viewModel.latestSession.collectAsStateWithLifecycle()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val running = phase as? MonitoringPhase.Running
@@ -100,6 +102,7 @@ fun MonitoringScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(formatDuration(now - running.startedAtEpochMs), style = MaterialTheme.typography.headlineSmall)
+                    underlaySessionLabel(underlay)?.let { Text(it) }
                     Text("Applications : ${live.applications}")
                     Text("Destinations : ${live.destinations}")
                     Text("Envoyé : ${formatBytes(live.bytesSent)}")
@@ -137,6 +140,7 @@ fun MonitoringScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Dernière session", style = MaterialTheme.typography.titleMedium)
+                    underlaySessionLabel(session.underlayType)?.let { Text(it) }
                     Text(formatDuration(session.durationMillis()))
                     Text(
                         if (session.status == SessionStatus.COMPLETED) "Terminée" else "Interrompue",

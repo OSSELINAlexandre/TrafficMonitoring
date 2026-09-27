@@ -1,5 +1,6 @@
 package com.trafficmonitor.privacy.monitoring
 
+import com.trafficmonitor.privacy.data.model.UnderlayType
 import kotlinx.coroutines.flow.MutableStateFlow
 
 sealed interface MonitoringPhase {
@@ -11,4 +12,5 @@ sealed interface MonitoringPhase {
 class MonitoringRuntime {
     val phase = MutableStateFlow<MonitoringPhase>(MonitoringPhase.Idle)
     val live = MutableStateFlow(LiveCounts())
+    val underlay = MutableStateFlow(UnderlayType.UNKNOWN)
 }

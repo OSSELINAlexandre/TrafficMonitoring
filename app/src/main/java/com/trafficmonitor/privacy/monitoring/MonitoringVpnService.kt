@@ -16,6 +16,7 @@ import com.trafficmonitor.privacy.TrafficMonitorApplication
 import com.trafficmonitor.privacy.data.database.FinishUpdate
 import com.trafficmonitor.privacy.data.model.AttributionStatus
 import com.trafficmonitor.privacy.data.model.SessionStatus
+import com.trafficmonitor.privacy.data.model.UnderlayType
 import com.trafficmonitor.privacy.forwarding.AllowAllPolicyEngine
 import com.trafficmonitor.privacy.forwarding.ClosedFlow
 import com.trafficmonitor.privacy.forwarding.ForwardingListener
@@ -54,6 +55,7 @@ class MonitoringVpnService : VpnService() {
     @Volatile private var sessionId: Long? = null
     @Volatile private var tun: ParcelFileDescriptor? = null
     @Volatile private var checkpointTask: ScheduledFuture<*>? = null
+    @Volatile private var recordedUnderlay: String? = null
     private lateinit var underlay: UnderlayWatcher
 
     private val socketGuard = object : SocketGuard {
@@ -154,7 +156,10 @@ class MonitoringVpnService : VpnService() {
         tracker.reset()
         val startedAt = System.currentTimeMillis()
         try {
-            val id = runBlocking { graph.repository.startSession(startedAt) }
+            val kind = underlay.recordedKind()
+            recordedUnderlay = kind
+            graph.runtime.underlay.value = kind
+            val id = runBlocking { graph.repository.startSession(startedAt, kind) }
             sessionId = id
             graph.runtime.phase.value = MonitoringPhase.Running(id, startedAt)
             graph.runtime.live.value = LiveCounts()
@@ -197,7 +202,7 @@ class MonitoringVpnService : VpnService() {
             link?.let { engine.updateUnderlay(it.mtu, it.dnsServers) }
             scheduleCheckpoints()
             updateNotification("Surveillance en cours")
-            MonitorLog.info("vpn started session=$id")
+            MonitorLog.info("vpn started session=$id underlay=$kind")
         } catch (error: Throwable) {
             MonitorLog.error("vpn start failed", error)
             graph.runtime.phase.value = MonitoringPhase.Failed("La surveillance n'a pas pu démarrer.")
@@ -243,8 +248,10 @@ class MonitoringVpnService : VpnService() {
             }
         }
         sessionId = null
+        recordedUnderlay = null
         tracker.reset()
         graph.runtime.live.value = LiveCounts()
+        graph.runtime.underlay.value = UnderlayType.UNKNOWN
         if (foreground) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             foreground = false
@@ -284,14 +291,23 @@ class MonitoringVpnService : VpnService() {
     }
 
     private fun adopt(snapshot: UnderlaySnapshot) {
+        rememberUnderlay(snapshot.kind())
         if (!running) return
         runCatching { setUnderlyingNetworks(arrayOf(snapshot.network)) }
             .onFailure { MonitorLog.error("underlying networks", it) }
         engine.updateUnderlay(snapshot.mtu, snapshot.dnsServers)
         MonitorLog.info(
-            "underlay wifi=${snapshot.wifi} cellular=${snapshot.cellular} mtu=${snapshot.mtu} " +
-                "dns=${snapshot.dnsServers.size}",
+            "underlay kind=${snapshot.kind()} wifi=${snapshot.wifi} cellular=${snapshot.cellular} " +
+                "mtu=${snapshot.mtu} dns=${snapshot.dnsServers.size}",
         )
+    }
+
+    private fun rememberUnderlay(kind: String) {
+        graph.runtime.underlay.value = kind
+        val id = sessionId ?: return
+        if (recordedUnderlay == kind) return
+        recordedUnderlay = kind
+        runBlocking { graph.repository.updateUnderlay(id, kind) }
     }
 
     private fun publishLive() {

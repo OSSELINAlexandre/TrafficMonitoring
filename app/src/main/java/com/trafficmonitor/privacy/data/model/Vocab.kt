@@ -59,3 +59,14 @@ object MonitoringMode {
 object CountingMethod {
     const val FIRESTACK_FLOW_RX_TX = "FIRESTACK_FLOW_RX_TX"
 }
+
+/**
+ * Physical network chosen for socket bind, setUnderlyingNetworks, and system DNS.
+ * Recorded on the session. Not a radio-quality metric.
+ */
+object UnderlayType {
+    const val WIFI = "WIFI"
+    const val CELLULAR = "CELLULAR"
+    const val OTHER = "OTHER"
+    const val UNKNOWN = "UNKNOWN"
+}
