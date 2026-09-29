@@ -1,198 +1,198 @@
-# Task: Android 16 Firestack Technical Spike
+# Tâche : essai technique jetable de Firestack sous Android 16
 
-Read `SPEC.md` and `REVUE_ANDROID_16.md`.
+Lisez `SPEC.md` et `REVUE_ANDROID_16.md`.
 
-This task is NOT the implementation of the production application.
+Cette tâche N'EST PAS la réalisation de l'application de production.
 
-Create a disposable technical spike whose only purpose is to determine whether Firestack is suitable as the forwarding engine for the Network Privacy Monitor.
+Créez un prototype technique jetable dont le seul but est de déterminer si Firestack convient comme moteur d'acheminement pour le Network Privacy Monitor.
 
-Target device:
+Appareil cible :
 
 - Samsung Galaxy A57 5G
 - Android 16 / API 36
 - ARM64
 
-## Primary objective
+## Objectif principal
 
-Determine whether Firestack can provide a reliable local `VpnService` forwarding layer while exposing enough information to implement our monitoring requirements.
+Déterminer si Firestack peut fournir une couche d'acheminement locale fiable basée sur `VpnService`, tout en fournissant assez d'informations pour répondre à nos exigences de surveillance.
 
-Do not build the real UI, Room database, tracker classification system, history system, or production architecture.
+Ne construisez pas la vraie interface, la base de données Room, le système de classification des traqueurs, le système d'historique ni l'architecture de production.
 
-## Required investigation
+## Points à étudier
 
-Determine whether Firestack can support:
+Déterminer si Firestack permet :
 
-- ownership of the Android TUN file descriptor;
-- direct local Internet forwarding without a remote VPN server;
-- protected outbound sockets;
-- TCP;
-- UDP;
-- QUIC traffic;
-- IPv4;
-- IPv6;
-- ICMP/ICMPv6 requirements;
-- Wi-Fi;
-- mobile data;
-- switching between Wi-Fi and mobile data;
-- DNS traffic observation when DNS is visible;
-- bidirectional traffic counters;
-- observation of original connection tuples before forwarding/proxy transformation;
-- integration with `ConnectivityManager.getConnectionOwnerUid()`;
-- clean VPN start;
-- clean VPN stop;
-- VPN revocation;
-- ARM64;
-- Android 16 16-KiB memory pages.
+- de prendre possession du descripteur de fichier TUN d'Android ;
+- l'acheminement local direct vers Internet, sans serveur VPN distant ;
+- des connexions sortantes (sockets) protégées ;
+- TCP ;
+- UDP ;
+- le trafic QUIC ;
+- IPv4 ;
+- IPv6 ;
+- les besoins liés à ICMP/ICMPv6 ;
+- le Wi-Fi ;
+- les données mobiles ;
+- le passage du Wi-Fi aux données mobiles et inversement ;
+- l'observation du trafic DNS lorsque le DNS est visible ;
+- des compteurs de trafic dans les deux sens ;
+- l'observation des identifiants d'origine des connexions (adresses et ports) avant leur transformation par l'acheminement ou le relais ;
+- l'intégration avec `ConnectivityManager.getConnectionOwnerUid()` ;
+- un démarrage propre du VPN ;
+- un arrêt propre du VPN ;
+- la révocation du VPN ;
+- ARM64 ;
+- les pages mémoire de 16 Kio d'Android 16.
 
-## UID attribution experiment
+## Expérience d'attribution par UID
 
-For every newly observed TCP/UDP flow, attempt application attribution as early as possible using the original flow tuple.
+Pour chaque nouveau flux TCP/UDP observé, tentez l'attribution à une application le plus tôt possible, à partir des identifiants d'origine du flux.
 
-Record:
+Enregistrez :
 
-- protocol;
-- source IP;
-- source port;
-- destination IP;
-- destination port;
-- returned UID;
-- attribution status;
-- package(s) associated with the UID.
+- le protocole ;
+- l'IP source ;
+- le port source ;
+- l'IP de destination ;
+- le port de destination ;
+- l'UID renvoyé ;
+- l'état de l'attribution ;
+- le ou les paquets d'application associés à l'UID.
 
-The experiment must explicitly record cases where Android returns `INVALID_UID`.
+L'expérience doit enregistrer explicitement les cas où Android renvoie `INVALID_UID`.
 
-Do not assume attribution is always possible.
+Ne supposez pas que l'attribution est toujours possible.
 
-## Traffic counter experiment
+## Expérience sur les compteurs de trafic
 
-Determine at what layer Firestack exposes traffic counters.
+Déterminez à quel niveau Firestack fournit des compteurs de trafic.
 
-Compare, where possible:
+Comparez, lorsque c'est possible :
 
-- original TUN IP packet sizes;
-- forwarding-engine counters;
-- socket-level counters.
+- la taille des paquets IP d'origine dans le TUN ;
+- les compteurs du moteur d'acheminement ;
+- les compteurs au niveau des sockets.
 
-Document which metric would be practical for V1.
+Indiquez quelle mesure serait utilisable en pratique pour la V1.
 
-Do not silently substitute payload bytes for IP-level bytes.
+Ne remplacez pas en silence les octets IP par les octets de contenu utile.
 
-## DNS experiment
+## Expérience sur le DNS
 
-Observe ordinary DNS traffic where possible.
+Observez le trafic DNS ordinaire lorsque c'est possible.
 
-Test at least:
+Testez au moins :
 
-1. normal system DNS;
-2. Android Private DNS if enabled/available;
-3. an application using encrypted DNS if readily testable.
+1. le DNS normal du système ;
+2. le DNS privé d'Android (Private DNS), s'il est activé ou disponible ;
+3. une application utilisant du DNS chiffré, si c'est facile à tester.
 
-Do not disable encrypted DNS to make the experiment succeed.
+Ne désactivez pas le DNS chiffré pour faire réussir l'expérience.
 
-Record when domains are observable and when only destination IP addresses are available.
+Notez quand les domaines sont observables et quand seules les adresses IP de destination sont disponibles.
 
-Do not implement TLS ClientHello/SNI inspection.
+N'ajoutez pas d'inspection du TLS ClientHello ou du SNI.
 
-## IPv6 requirements
+## Exigences IPv6
 
-Verify real IPv6 forwarding.
+Vérifiez un véritable acheminement IPv6.
 
-The VPN must not silently bypass IPv6.
+Le VPN ne doit pas laisser IPv6 le contourner en silence.
 
-Test:
+Testez :
 
-- IPv6 connectivity;
-- TCP over IPv6;
-- UDP over IPv6;
-- ICMPv6 behavior where relevant;
-- PMTU behavior where practical.
+- la connectivité IPv6 ;
+- TCP sur IPv6 ;
+- UDP sur IPv6 ;
+- le comportement d'ICMPv6 lorsque c'est pertinent ;
+- le comportement de découverte de la taille maximale de paquet (PMTU) lorsque c'est possible.
 
-If full IPv6 forwarding cannot be demonstrated, record the spike as failing the IPv6 requirement.
+Si l'acheminement IPv6 complet ne peut pas être démontré, notez que le prototype ne satisfait pas l'exigence IPv6.
 
-## Network transition test
+## Essai de changement de réseau
 
-While monitoring:
+Pendant la surveillance :
 
-1. start on Wi-Fi;
-2. generate traffic;
-3. disable Wi-Fi;
-4. continue on mobile data;
-5. generate traffic;
-6. restore Wi-Fi.
+1. démarrer en Wi-Fi ;
+2. générer du trafic ;
+3. désactiver le Wi-Fi ;
+4. continuer en données mobiles ;
+5. générer du trafic ;
+6. rétablir le Wi-Fi.
 
-Record:
+Notez :
 
-- whether existing flows survive;
-- whether new flows work;
-- whether the VPN must be recreated;
-- whether attribution remains functional.
+- si les flux existants survivent ;
+- si les nouveaux flux fonctionnent ;
+- si le VPN doit être recréé ;
+- si l'attribution reste fonctionnelle.
 
-## Performance observations
+## Observations de performance
 
-This is not a formal benchmark.
+Il ne s'agit pas d'une mesure de performance formelle.
 
-Record at least:
+Notez au moins :
 
-- obvious CPU issues;
-- obvious battery/thermal issues;
-- memory consumption;
-- crashes;
-- network stalls;
-- significant throughput degradation.
+- les problèmes évidents de processeur ;
+- les problèmes évidents de batterie ou de chauffe ;
+- la consommation de mémoire ;
+- les plantages ;
+- les blocages du réseau ;
+- les baisses importantes de débit.
 
-## 16-KiB / native library validation
+## Validation 16 Kio / bibliothèques natives
 
-Inspect all native libraries introduced by Firestack.
+Examinez toutes les bibliothèques natives apportées par Firestack.
 
-Verify compatibility/alignment expectations for Android 16 and 16-KiB page-size devices.
+Vérifiez la compatibilité et l'alignement attendus pour Android 16 et les appareils à pages de 16 Kio.
 
-Record the ABI and native artifacts used.
+Notez l'ABI et les fichiers natifs utilisés.
 
-## Deliverable
+## Livrable
 
-Produce:
+Produire :
 
 `FIRESTACK_SPIKE_REPORT.md`
 
-Do not merely state PASS or FAIL.
+Ne vous contentez pas d'indiquer RÉUSSI ou ÉCHEC.
 
-Include a matrix:
+Incluez un tableau :
 
-| Requirement | Result | Evidence | Limitation |
+| Exigence | Résultat | Preuve | Limite |
 |---|---|---|---|
-| TCP IPv4 | PASS/FAIL | ... | ... |
-| UDP IPv4 | PASS/FAIL | ... | ... |
-| TCP IPv6 | PASS/FAIL | ... | ... |
-| UDP IPv6 | PASS/FAIL | ... | ... |
-| QUIC | PASS/FAIL | ... | ... |
-| UID attribution | ... | ... | ... |
-| DNS observation | ... | ... | ... |
+| TCP IPv4 | RÉUSSI/ÉCHEC | ... | ... |
+| UDP IPv4 | RÉUSSI/ÉCHEC | ... | ... |
+| TCP IPv6 | RÉUSSI/ÉCHEC | ... | ... |
+| UDP IPv6 | RÉUSSI/ÉCHEC | ... | ... |
+| QUIC | RÉUSSI/ÉCHEC | ... | ... |
+| Attribution par UID | ... | ... | ... |
+| Observation du DNS | ... | ... | ... |
 | Wi-Fi → 5G | ... | ... | ... |
 | 5G → Wi-Fi | ... | ... | ... |
-| Bidirectional counters | ... | ... | ... |
-| 16-KiB compatibility | ... | ... | ... |
+| Compteurs dans les deux sens | ... | ... | ... |
+| Compatibilité 16 Kio | ... | ... | ... |
 
-Also document:
+Documentez aussi :
 
-- exact Firestack version/commit tested;
-- exact dependencies;
-- required permissions;
-- native components;
-- integration complexity;
-- APIs/hooks available for monitoring;
-- missing APIs/hooks;
-- any modifications that would be required to Firestack.
+- la version ou le commit exact de Firestack testé ;
+- les dépendances exactes ;
+- les autorisations nécessaires ;
+- les composants natifs ;
+- la complexité d'intégration ;
+- les API et points d'accroche disponibles pour la surveillance ;
+- les API et points d'accroche manquants ;
+- toute modification qu'il faudrait apporter à Firestack.
 
-## Final assessment
+## Évaluation finale
 
-End the report with one of:
+Terminez le rapport par l'une des mentions suivantes :
 
-- `SUITABLE`
-- `SUITABLE WITH MODIFICATIONS`
-- `UNSUITABLE`
+- `SUITABLE` (adapté)
+- `SUITABLE WITH MODIFICATIONS` (adapté avec modifications)
+- `UNSUITABLE` (inadapté)
 
-Explain the technical reasons.
+Expliquez les raisons techniques.
 
-Do NOT start implementing the production application after the report.
+NE commencez PAS à réaliser l'application de production après le rapport.
 
-Wait for human review.
+Attendez l'examen par une personne.

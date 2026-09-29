@@ -1,31 +1,33 @@
-# Firestack Android 16 spike
+# Prototype jetable Firestack pour Android 16
 
-Disposable test application for `CODEX_TASK.md`. It is not production architecture.
+Application d'essai jetable pour `CODEX_TASK.md`. Ce n'est pas l'architecture de production.
 
-## Build
+## Compilation
 
-Set `sdk.dir` in `local.properties`, then run:
+Renseignez `sdk.dir` dans `local.properties`, puis lancez :
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
+L'APK est produit dans `app/build/outputs/apk/debug/app-debug.apk`.
 
-The local workstation used for the first build did not have the API 36 platform. The
-spike therefore compiles with API 35 while declaring `minSdk = 36` and `targetSdk = 36`.
-Replace the toolchain with an API-36-aware AGP/D8 before treating build compatibility as
-production evidence.
+Le poste local utilisé pour la première compilation ne disposait pas de la plateforme API 36.
+Le prototype compile donc avec l'API 35 tout en déclarant `minSdk = 36` et `targetSdk = 36`.
+Remplacez la chaîne de compilation par une version d'AGP/D8 qui connaît l'API 36 avant de
+considérer la compatibilité de compilation comme une preuve valable pour la production.
 
-## Device run
+## Essai sur l'appareil
 
-Install, open the app, press **Démarrer le VPN**, and accept Android's VPN consent dialog.
-Generate the traffic described in `FIRESTACK_SPIKE_REPORT.md`, then retrieve the JSONL log:
+Installez l'application, ouvrez-la, appuyez sur **Démarrer le VPN**, puis acceptez la fenêtre
+d'autorisation VPN d'Android. Générez le trafic décrit dans `FIRESTACK_SPIKE_REPORT.md`, puis
+récupérez le journal JSONL :
 
 ```bash
 adb shell run-as com.trafficmonitor.firestackspike \
   cat files/firestack-spike/events.jsonl > firestack-events.jsonl
 ```
 
-No PCAP or packet payload is recorded. The log contains network metadata including IP
-addresses, ports, DNS names when Firestack sees them, UIDs, package names, and counters.
+Aucun fichier PCAP ni contenu de paquet n'est enregistré. Le journal contient des métadonnées
+réseau, notamment les adresses IP, les ports, les noms DNS lorsque Firestack les voit, les UID,
+les noms de paquets et les compteurs.
