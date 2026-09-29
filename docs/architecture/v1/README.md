@@ -1,0 +1,122 @@
+# Architecture du cœur V1 — version 1
+
+Schéma tiré du code de la branche `cursor/android-monitoring-core-df04` (PR #1), module `app/`, package `com.trafficmonitor.privacy`. Source brute : [architecture-coeur-v1.mmd](architecture-coeur-v1.mmd).
+
+Non représentés pour garder le schéma lisible : `monitoring.PacketParser` et `monitoring.Protocols` (utilitaires secondaires).
+
+```mermaid
+---
+title: TrafficMonitoring — Architecture du cœur V1 (PR #1, module app/)
+---
+graph TB
+  subgraph APP["Entrée de l'app (com.trafficmonitor.privacy)"]
+    TMA["TrafficMonitorApplication<br/>crée et garde l'AppGraph"]
+    GRAPH["AppGraph<br/>assemble base, dépôt, rétention,<br/>état partagé, classifieur"]
+    MAIN["MainActivity<br/>lance l'interface Compose"]
+  end
+
+  subgraph UI["ui — écrans Compose"]
+    NAV["TrafficMonitorNav<br/>onglets Surveillance / Résultats / Réglages"]
+    MS["monitoring.MonitoringScreen + MonitoringViewModel<br/>démarrer/arrêter, compteurs en direct"]
+    RS["results.ResultsScreen + ResultsViewModel<br/>dernière session : apps vers serveurs,<br/>filtre par catégorie"]
+    AD["results.AppDetailScreen + AppDetailViewModel<br/>destinations d'une app"]
+    SS["settings.SettingsScreen + SettingsViewModel<br/>taille base, rétention, version Firestack"]
+  end
+
+  subgraph MON["monitoring — surveillance"]
+    VPN["MonitoringVpnService (VpnService)<br/>VPN local en premier plan,<br/>toutes les apps, notification"]
+    RT["MonitoringRuntime<br/>état partagé : MonitoringPhase, LiveCounts"]
+    TUN["TunProfile<br/>MTU, adresses IPv4/IPv6, DNS virtuel"]
+    UW["UnderlayWatcher<br/>suit le réseau réel (mobile / Wi‑Fi)"]
+    AR["AppResolver + AttributionRules<br/>connexion vers UID vers paquet d'app"]
+    DR["DomainResolver<br/>associe IP et nom de domaine via le DNS vu"]
+    FT["FlowTracker<br/>agrège les flux par app et destination"]
+    PROJ["SessionProjection.projectSession()<br/>transforme les agrégats en résumé de session"]
+    LOG["MonitorLog<br/>journal logcat TrafficMonitor"]
+  end
+
+  subgraph FWD["forwarding — moteur de relais"]
+    CONTRACT["ForwardingContract<br/>interfaces ForwardingEngine, ForwardingListener,<br/>FlowAttributor, PolicyEngine (AllowAllPolicyEngine)"]
+    EP["EndpointParser<br/>lit les adresses ip:port"]
+    FSE["implementation.FirestackForwardingEngine<br/>adaptateur Firestack : preflow, flow,<br/>postflow, DNS ; SocketGuard"]
+    PIN["implementation.FirestackPin<br/>version figée de Firestack"]
+  end
+
+  FIRE[("Bibliothèque Firestack<br/>com.celzero:firestack (Intra)")]
+
+  subgraph CLS["classification — tri local"]
+    DC["DestinationClassifier<br/>interface : pub / analyse / inconnu"]
+    SDC["StubDestinationClassifier<br/>petite liste locale de suffixes"]
+  end
+
+  subgraph DATA["data — stockage local"]
+    REPO["repository.SessionRepository<br/>démarre, sauvegarde, termine les sessions"]
+    DB[("database.TrafficMonitorDatabase (Room, v1)<br/>traffic_monitor.db")]
+    DAO["database.SessionDao<br/>requêtes, dernière session terminée"]
+    ENT["database.Entities<br/>MonitoringSessionEntity, DestinationAggregateEntity,<br/>ApplicationSummaryEntity"]
+    MODEL["model.SessionDrafts + Vocab<br/>brouillons de session, catégories, statuts"]
+  end
+
+  RET["privacy.RetentionManager<br/>limite de taille et de durée de la base"]
+
+  ANDROID[["Android : ConnectivityManager,<br/>PackageManager, réseau réel 5G / Wi‑Fi"]]
+
+  TMA --> GRAPH
+  MAIN --> NAV
+  NAV --> MS
+  NAV --> RS
+  NAV --> AD
+  NAV --> SS
+
+  GRAPH --> DB
+  GRAPH --> REPO
+  GRAPH --> RET
+  GRAPH --> RT
+  GRAPH --> SDC
+
+  MS -->|lance / arrête| VPN
+  MS --> RT
+  MS --> REPO
+  RS --> REPO
+  AD --> REPO
+  SS --> RET
+  SS --> RT
+  SS --> PIN
+
+  VPN --> TUN
+  VPN --> UW
+  VPN --> AR
+  VPN --> FT
+  VPN --> PROJ
+  VPN -->|état en direct| RT
+  VPN -->|enregistre| REPO
+  VPN --> CONTRACT
+  VPN --> FSE
+  VPN --> LOG
+
+  FT --> DR
+  FT --> EP
+  AR --> EP
+  DR --> EP
+  PROJ --> DC
+  PROJ --> MODEL
+  SDC -.implémente.-> DC
+
+  FSE -.implémente.-> CONTRACT
+  FSE --> EP
+  FSE --> PIN
+  FSE --> LOG
+  FSE --> FIRE
+  FSE -->|événements flux et DNS| VPN
+
+  AR --> ANDROID
+  UW --> ANDROID
+  FIRE -->|trafic relayé| ANDROID
+
+  REPO --> DB
+  REPO --> MODEL
+  DB --> DAO
+  DAO --> ENT
+  RET --> REPO
+  RET --> DB
+```
