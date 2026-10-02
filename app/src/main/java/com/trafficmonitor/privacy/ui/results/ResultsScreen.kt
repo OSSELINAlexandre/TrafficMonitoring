@@ -39,6 +39,7 @@ import com.trafficmonitor.privacy.ui.categoryLabel
 import com.trafficmonitor.privacy.ui.formatBytes
 import com.trafficmonitor.privacy.ui.formatDuration
 import com.trafficmonitor.privacy.ui.formatWhen
+import com.trafficmonitor.privacy.ui.underlaySessionLabel
 import com.trafficmonitor.privacy.ui.monitoring.durationMillis
 import com.trafficmonitor.privacy.ui.privacyLabel
 
@@ -67,6 +68,7 @@ fun ResultsScreen(
         item {
             Text("Dernière session", style = MaterialTheme.typography.headlineMedium)
             Text(formatWhen(current.startedAtEpochMs), style = MaterialTheme.typography.bodyMedium)
+            underlaySessionLabel(current.underlayType)?.let { Text(it) }
             Text(formatDuration(current.durationMillis()))
             if (current.status != SessionStatus.COMPLETED) {
                 Text(

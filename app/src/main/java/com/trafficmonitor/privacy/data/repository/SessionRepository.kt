@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.Flow
 class SessionRepository(private val database: TrafficMonitorDatabase) {
     private val dao = database.sessions()
 
-    suspend fun startSession(startedAtEpochMs: Long): Long = dao.insertSession(
+    suspend fun startSession(startedAtEpochMs: Long, underlayType: String): Long = dao.insertSession(
         MonitoringSessionEntity(
             startedAtEpochMs = startedAtEpochMs,
             endedAtEpochMs = null,
@@ -26,8 +26,13 @@ class SessionRepository(private val database: TrafficMonitorDatabase) {
             countingMethod = CountingMethod.FIRESTACK_FLOW_RX_TX,
             nicRxBytes = 0,
             nicTxBytes = 0,
+            underlayType = underlayType,
         ),
     )
+
+    suspend fun updateUnderlay(sessionId: Long, underlayType: String) {
+        dao.updateUnderlay(sessionId, underlayType)
+    }
 
     suspend fun checkpoint(
         sessionId: Long,

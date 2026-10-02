@@ -9,9 +9,13 @@ The disposable Firestack feasibility spike stays in `spike/` and is unchanged. P
 - Jetpack Compose navigation: Surveillance, Résultats, Réglages.
 - Foreground `VpnService` (`systemExempted`), VPN consent, persistent notification, start/stop.
 - `ForwardingEngine` implemented by Firestack (`com.celzero:firestack:c4a33649be@aar`, commit `c4a33649be94e6a4709dc3b098cd57453aacf34b`, MPL-2.0). The rest of the app does not call Firestack directly.
-- The engine owns the TUN. Socket `protect` + bind onto the active non-VPN network (mobile data or Wi-Fi). `preflow` calls `ConnectivityManager.getConnectionOwnerUid`. Closed-flow rx/tx and plaintext DNS answers feed an in-memory `FlowTracker`.
-- On stop (and about every 20 seconds), a `MonitoringSession` plus aggregated per-app destination rows are written to Room. Bytes are Firestack forwarding counters, not raw TUN IP lengths.
-- Results show the latest finished session: applications, destinations, and a category when the local stub list matches. Otherwise the category stays **Inconnu**.
+- The engine owns the TUN. Socket `protect` + bind onto a non-VPN underlay. Validated Wi-Fi is preferred when it is available; otherwise the session uses mobile data. `preflow` calls `ConnectivityManager.getConnectionOwnerUid`. Closed-flow rx/tx and plaintext DNS answers feed an in-memory `FlowTracker`. The same attribution, destination, and classifier path runs on either underlay.
+- On stop (and about every 20 seconds), a `MonitoringSession` plus aggregated per-app destination rows are written to Room. The session stores the underlay type (`WIFI` or `CELLULAR`) recorded at start, and updates that value if the preferred underlay changes. Bytes are Firestack forwarding counters, not raw TUN IP lengths.
+- Results show the latest finished session: applications, destinations, and a category when the local stub list matches. Otherwise the category stays **Inconnu**. The session line is « Session en Wi‑Fi » or « Session en 5G / mobile ».
+
+## Wi-Fi
+
+Wi-Fi is supported as a bonus. The primary target remains mobile data / 5G. When a validated Wi-Fi network is available, outbound sockets bind to it, `VpnService.setUnderlyingNetworks` points at it, and Firestack is given that network's DNS servers. Otherwise the session uses mobile. This version does not claim that switching between Wi-Fi and mobile in the middle of a route is reliable, and it does not recreate the VPN when the radio changes.
 
 ## What is stubbed
 

@@ -1,9 +1,11 @@
 package com.trafficmonitor.privacy.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.trafficmonitor.privacy.data.model.UnderlayType
 
 @Entity(tableName = "monitoring_sessions")
 data class MonitoringSessionEntity(
@@ -16,6 +18,8 @@ data class MonitoringSessionEntity(
     val countingMethod: String,
     val nicRxBytes: Long,
     val nicTxBytes: Long,
+    @ColumnInfo(defaultValue = "'UNKNOWN'")
+    val underlayType: String = UnderlayType.UNKNOWN,
 )
 
 @Entity(

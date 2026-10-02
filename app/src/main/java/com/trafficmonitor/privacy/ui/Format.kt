@@ -1,5 +1,6 @@
 package com.trafficmonitor.privacy.ui
 
+import com.trafficmonitor.privacy.data.model.UnderlayType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -55,6 +56,12 @@ fun privacyLabel(value: String): String = when (value) {
     "KNOWN_TRACKER" -> "Traqueur connu"
     "POTENTIAL_TRACKER" -> "Traqueur potentiel"
     else -> "Non classé"
+}
+
+fun underlaySessionLabel(type: String): String? = when (type) {
+    UnderlayType.WIFI -> "Session en Wi\u2011Fi"
+    UnderlayType.CELLULAR -> "Session en 5G / mobile"
+    else -> null
 }
 
 fun attributionLabel(status: String): String = when (status) {

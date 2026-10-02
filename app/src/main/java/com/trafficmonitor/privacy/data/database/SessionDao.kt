@@ -61,6 +61,9 @@ interface SessionDao {
     )
     suspend fun updateNic(id: Long, nicRxBytes: Long, nicTxBytes: Long)
 
+    @Query("UPDATE monitoring_sessions SET underlayType = :underlayType WHERE id = :id")
+    suspend fun updateUnderlay(id: Long, underlayType: String)
+
     @Query(
         """
         UPDATE monitoring_sessions
