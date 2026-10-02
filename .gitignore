@@ -32,3 +32,12 @@ spike/build/
 spike/app/build/
 spike/local.properties
 !spike/gradle/wrapper/gradle-wrapper.jar
+
+# Production Android app
+.gradle/
+build/
+local.properties
+app/build/
+*.apk
+.cxx/
+!gradle/wrapper/gradle-wrapper.jar
